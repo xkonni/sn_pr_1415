@@ -20,7 +20,7 @@ module EchoP {
 	event void Echo.recvfrom(struct sockaddr_in6 *from, void *data,
 			  uint16_t len, struct ip6_metadata *meta) {
 		char* str = data;
-		uint64_t i;
+		uint16_t i;
 		bool isNumber = TRUE;
 
 		for (i = 0; i < len - 1; i++) {
