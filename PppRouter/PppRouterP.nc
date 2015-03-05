@@ -9,7 +9,7 @@
 #include "blip_printf.h"
 
 module PppRouterP {
-  provides { 
+  provides {
     interface IPForward;
   }
   uses {
@@ -26,7 +26,7 @@ module PppRouterP {
     interface Dhcp6Info;
     interface IPPacket;
   }
-  
+
 } implementation {
 
   event void PppIpv6.linkUp() {}
@@ -42,13 +42,18 @@ module PppRouterP {
   event void PppControl.stopDone (error_t error) { }
 
   event void IPControl.startDone (error_t error) {
-    struct in6_addr dhcp6_group;
+  struct in6_addr dhcp6_group;
+  struct in6_addr siteLocalMulticast;
 
     // add a route to the dhcp group on PPP, not the radio (which is the default)
     inet_pton6(DH6ADDR_ALLAGENT, &dhcp6_group);
     call ForwardingTable.addRoute(dhcp6_group.s6_addr, 128, NULL, ROUTE_IFACE_PPP);
 
-    // add a default route through the PPP link
+  // add a route for site-local multicast
+    inet_pton6("ff05::1", &siteLocalMulticast);
+    call ForwardingTable.addRoute(siteLocalMulticast.s6_addr, 16, siteLocalMulticast.s6_addr, ROUTE_IFACE_154);
+
+    // add a default route through the PPP link in both directions
     call ForwardingTable.addRoute(NULL, 0, NULL, ROUTE_IFACE_PPP);
   }
   event void IPControl.stopDone (error_t error) { }
@@ -87,15 +92,15 @@ module PppRouterP {
     frame_key_t key;
     const uint8_t* fpe;
     uint8_t* fp;
-    
-    if (!call PppIpv6.linkIsUp()) 
+
+    if (!call PppIpv6.linkIsUp())
       return EOFF;
 
     // get an output frame
     fp = call Ppp.getOutputFrame(PppProtocol_Ipv6, &fpe, FALSE, &key);
     if ((! fp) || ((fpe - fp) < len)) {
       if (fp) {
-	call Ppp.releaseOutputFrame(key);
+  call Ppp.releaseOutputFrame(key);
       }
       call Leds.led2Toggle();
       return ENOMEM;
